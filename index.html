@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nugget's Fraction Challenge 1</title>
+    <style>
+        /* --- GLOBAL STYLES --- */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; padding: 10px; 
+        }
+        
+        /* Restored Large Header */
+        h1 { 
+            color: #333; 
+            margin: 10px 0 20px 0; 
+            font-size: 32px; /* Larger Title */
+            display: flex; align-items: center; gap: 15px; 
+        }
+        .nugget-img { height: 70px; width: auto; } /* Larger Nugget */
+        
+        /* --- GAME CONTAINER (Compact) --- */
+        .game-card {
+            background: white; padding: 20px; border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px;
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+
+        /* --- DASHBOARD (Level & Goal on one line) --- */
+        .dashboard {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; margin-bottom: 10px; background: #f8f9fa;
+            padding: 8px 15px; border-radius: 10px; box-sizing: border-box;
+        }
+        .level-badge {
+            background: #339af0; color: white; padding: 4px 12px; border-radius: 10px;
+            font-size: 14px; font-weight: bold; text-transform: uppercase;
+        }
+        .goal-text {
+            font-size: 22px; font-weight: 800; color: #333;
+        }
+
+        .instruction-text { 
+            color: #666; text-align: center; font-size: 14px; margin: 0 0 15px 0; line-height: 1.4; 
+        }
+
+        /* --- SVG STAGE --- */
+        #shape-stage { margin-bottom: 10px; display: flex; justify-content: center; }
+        svg { max-height: 240px; max-width: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); user-select: none; }
+        .puzzle-piece { cursor: pointer; transition: opacity 0.15s, fill 0.15s; stroke: #333; stroke-width: 2px; }
+        .puzzle-piece:hover { opacity: 0.8; }
+        
+        /* --- CONTROLS --- */
+        .btn-row { margin-top: 15px; display: flex; gap: 10px; }
+        .btn { padding: 10px 24px; border: none; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: bold; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.96); }
+        
+        .btn-check { background-color: #ffd43b; color: #333; border-bottom: 3px solid #fab005; }
+        .btn-next { background-color: #20c997; color: white; border-bottom: 3px solid #0ca678; display: none; }
+
+        /* --- FEEDBACK --- */
+        #feedback-area {
+            height: 35px; width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 5px;
+        }
+        .message-box {
+            padding: 6px 15px; border-radius: 6px; font-weight: bold; font-size: 15px; width: 100%; text-align: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .message-box.visible { opacity: 1; }
+        .msg-error { background-color: #ffe3e3; color: #c92a2a; border: 1px solid #fa5252; }
+        .msg-success { background-color: #d3f9d8; color: #087f5b; border: 1px solid #20c997; }
+
+        /* --- CERTIFICATE VIEW --- */
+        #certificate-view { display: none; width: 100%; max-width: 500px; text-align: center; background: white; padding: 25px; border-radius: 20px; border: 8px solid #ffd43b; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .cert-title { font-size: 28px; color: #fab005; margin-bottom: 10px; font-family: 'Georgia', serif; letter-spacing: 2px; text-transform: uppercase; }
+        .cert-name { font-size: 24px; font-weight: bold; color: #333; border-bottom: 2px solid #ccc; padding: 0 20px; display: inline-block; margin: 10px 0; font-family: 'Courier New', monospace; }
+        .cert-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 20px; }
+        .paw-print { font-size: 30px; color: #fab005; opacity: 0.6; transform: rotate(-15deg); }
+        .sign-line { border-top: 2px solid #888; width: 100px; margin-top: 5px; padding-top: 5px; font-weight: bold; color: #666; font-size: 12px; }
+
+        /* --- CERTIFICATE MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; max-width: 400px; width: 90%; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: slideDown 0.3s ease-out; text-align: center; }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <h1><img src="Nugget.png" alt="Nugget" class="nugget-img"> Nugget's Fraction Challenge</h1>
+
+    <div class="game-card" id="game-ui">
+        
+        <p class="instruction-text">
+            Click pieces to shade them. Big pieces count for more!<br>
+            Click <strong>Check</strong> when done.
+        </p>
+
+        <div class="dashboard">
+            <div class="level-badge" id="level-indicator">Level 1/10</div>
+            <div class="goal-text" id="target-display">Shade 1/4</div>
+        </div>
+
+        <div id="shape-stage">
+            </div>
+
+        <div id="feedback-area">
+            <div id="feedback-msg" class="message-box"></div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-check" onclick="checkAnswer()">Check Answer</button>
+            <button class="btn btn-next" id="next-btn" onclick="nextLevel()">Next Level &rarr;</button>
+        </div>
+    </div>
+
+    <div id="certificate-view">
+        <img src="Nugget.png" style="height: 80px; margin-bottom: 10px;" alt="Nugget">
+        <div class="cert-title">Certificate of Mastery</div>
+        <div style="font-size: 14px; color: #555; margin: 10px 0;">
+            This certifies that<br>
+            <span id="display-name" class="cert-name">Student Name</span><br>
+            has successfully completed "Nugget's Fraction Challenge".
+        </div>
+        <div style="font-size: 11px; color: #999; margin-top: 15px;">
+            Completed on: <span id="display-time"></span> <br>
+            <span id="display-code"></span>
+        </div>
+        <div class="cert-footer">
+            <div style="text-align: center;">
+                <div style="font-size: 18px; font-weight: bold; color: #444;">Nugget</div>
+                <div class="sign-line">Instructor</div>
+            </div>
+            <div style="text-align: center;">
+                <span class="paw-print">🐾</span>
+                <div class="sign-line">Signature</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="certModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Challenge Complete!</h2>
+            <p>Enter your name to sign your certificate.</p>
+            <input type="text" id="nameInput" placeholder="Your Name" style="padding: 8px; font-size: 16px; width: 80%; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; text-align: center;">
+            <br>
+            <button class="btn btn-next" style="display:inline-block;" onclick="generateCertificate()">Create Certificate</button>
+        </div>
+    </div>
+
+    <script>
+        /* GAME LOGIC
+           The Grid is 6x6. Total Area = 36 units.
+        */
+
+        const levels = [
+            { fraction: "1/4", targetVal: 9 },   // L1: 1/4 (Easier: One big block)
+            { fraction: "1/2", targetVal: 18 },  // L2: 1/2 (Harder: Combination)
+            { fraction: "1/3", targetVal: 12 },  // L3
+            { fraction: "1/6", targetVal: 6 },   // L4
+            { fraction: "1/9", targetVal: 4 },   // L5
+            { fraction: "3/4", targetVal: 27 },  // L6
+            { fraction: "2/3", targetVal: 24 },  // L7
+            { fraction: "5/12", targetVal: 15 }, // L8
+            { fraction: "23/36", targetVal: 23 },// L9: Hard (Prime)
+            { fraction: "7/9", targetVal: 28 }   // L10: Hard
+        ];
+
+        let currentLevel = 0;
+        let currentShadedValue = 0;
+        const totalValue = 36;
+        let isLevelSolved = false;
+
+        // Init
+        window.onload = function() {
+            renderPuzzleBoard();
+            loadLevel(0);
+        };
+
+        function loadLevel(idx) {
+            currentLevel = idx;
+            isLevelSolved = false;
+            currentShadedValue = 0;
+            
+            // UI Updates
+            document.getElementById('level-indicator').innerText = `Level ${currentLevel + 1}/${levels.length}`;
+            document.getElementById('target-display').innerHTML = `Shade ${levels[currentLevel].fraction}`;
+            document.getElementById('next-btn').style.display = 'none';
+            document.querySelector('.btn-check').style.display = 'inline-block';
+            hideFeedback();
+
+            // Reset Board
+            const pieces = document.querySelectorAll('.puzzle-piece');
+            pieces.forEach(p => {
+                p.setAttribute('fill', 'white');
+                p.dataset.selected = "false";
+            });
+        }
+
+        function checkAnswer() {
+            if (isLevelSolved) return;
+
+            const target = levels[currentLevel].targetVal;
+            const msgBox = document.getElementById('feedback-msg');
+
+            if (currentShadedValue === target) {
+                // SUCCESS
+                isLevelSolved = true;
+                msgBox.className = "message-box visible msg-success";
+                msgBox.innerHTML = `Correct! ${levels[currentLevel].fraction} is shaded.`;
+                
+                // Button Logic
+                const nextBtn = document.getElementById('next-btn');
+                nextBtn.style.display = 'inline-block';
+                
+                // Change text if last level
+                if (currentLevel === levels.length - 1) {
+                    nextBtn.innerHTML = "Claim certificate";
+                } else {
+                    nextBtn.innerHTML = "Next Level &rarr;";
+                }
+                
+                document.querySelector('.btn-check').style.display = 'none';
+            } else {
+                // FAILURE - Show simplified
+                msgBox.className = "message-box visible msg-error";
+                
+                // Calculate Simplified Fraction
+                if(currentShadedValue === 0) {
+                    msgBox.innerHTML = `You haven't shaded anything!`;
+                } else {
+                    const d = gcd(currentShadedValue, totalValue);
+                    const simNum = currentShadedValue / d;
+                    const simDen = totalValue / d;
+                    msgBox.innerHTML = `Not quite. You shaded <strong>${simNum}/${simDen}</strong>.`;
+                }
+                
+                // Auto-hide
+                setTimeout(() => {
+                    if (!isLevelSolved) hideFeedback();
+                }, 2500);
+            }
+        }
+
+        function nextLevel() {
+            if (currentLevel < levels.length - 1) {
+                loadLevel(currentLevel + 1);
+            } else {
+                openCertificateModal();
+            }
+        }
+
+        function hideFeedback() {
+            const msgBox = document.getElementById('feedback-msg');
+            msgBox.classList.remove('visible');
+        }
+
+        /* CERTIFICATE LOGIC */
+        function openCertificateModal() { document.getElementById('certModal').style.display = 'flex'; }
+        
+        function generateCertificate() {
+            const name = document.getElementById('nameInput').value.trim();
+            if(!name) { alert("Please enter your name."); return; }
+            
+            document.getElementById('display-name').innerText = name;
+            document.getElementById('display-time').innerText = new Date().toLocaleString();
+            document.getElementById('display-code').innerText = "Code: " + Math.floor(1000 + Math.random() * 9000);
+            
+            // Switch Views
+            document.getElementById('certModal').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'none';
+            document.querySelector('h1').innerText = "Congratulations!";
+            document.getElementById('certificate-view').style.display = 'block';
+        }
+
+        /* --- SVG GENERATION --- */
+        function renderPuzzleBoard() {
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("width", "240");
+            svg.setAttribute("height", "240");
+            svg.setAttribute("viewBox", "0 0 300 300");
+            svg.style.border = "3px solid #333";
+            svg.style.borderRadius = "4px";
+            svg.style.background = "#fff";
+
+            function createPiece(x, y, w, h, weight) {
+                const rect = document.createElementNS(svgNS, "rect");
+                rect.setAttribute("x", x * 50);
+                rect.setAttribute("y", y * 50);
+                rect.setAttribute("width", w * 50);
+                rect.setAttribute("height", h * 50);
+                rect.setAttribute("class", "puzzle-piece");
+                rect.setAttribute("fill", "white");
+                rect.dataset.weight = weight;
+                rect.dataset.selected = "false";
+                
+                rect.onclick = function() {
+                    if (isLevelSolved) return;
+                    if (this.dataset.selected === "true") {
+                        this.setAttribute("fill", "white");
+                        this.dataset.selected = "false";
+                        currentShadedValue -= parseInt(this.dataset.weight);
+                    } else {
+                        this.setAttribute("fill", "#74c0fc");
+                        this.dataset.selected = "true";
+                        currentShadedValue += parseInt(this.dataset.weight);
+                    }
+                    hideFeedback(); 
+                };
+                return rect;
+            }
+
+            // The Master Layout (6x6)
+            svg.appendChild(createPiece(0, 0, 3, 3, 9)); // Top Left
+            svg.appendChild(createPiece(3, 0, 3, 1, 3)); // Top Right Strip
+            svg.appendChild(createPiece(3, 1, 1, 2, 2)); // TR Col 1
+            svg.appendChild(createPiece(4, 1, 1, 2, 2)); // TR Col 2
+            svg.appendChild(createPiece(5, 1, 1, 2, 2)); // TR Col 3
+            
+            for(let r=3; r<6; r++) { for(let c=0; c<3; c++) { svg.appendChild(createPiece(c, r, 1, 1, 1)); } } // Bot Left 1x1s
+
+            svg.appendChild(createPiece(3, 3, 2, 2, 4)); // Bot Right Big
+            svg.appendChild(createPiece(5, 3, 1, 1, 1)); 
+            svg.appendChild(createPiece(5, 4, 1, 1, 1)); 
+            svg.appendChild(createPiece(5, 5, 1, 1, 1)); 
+            svg.appendChild(createPiece(4, 5, 1, 1, 1)); 
+            svg.appendChild(createPiece(3, 5, 1, 1, 1)); 
+
+            document.getElementById('shape-stage').appendChild(svg);
+        }
+
+        /* UTILS */
+        function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+    </script>
+</body>
+</html>
